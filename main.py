@@ -22,6 +22,8 @@ def main() -> None:
     parser.add_argument("--audience", default=None, help="Optional target audience")
     parser.add_argument("--red-lines", default=None, help="Optional things to avoid")
     parser.add_argument("--must-hits", default=None, help="Optional required talking points")
+    parser.add_argument("--tone", default=None, help="Optional tone (e.g. serious, conversational)")
+    parser.add_argument("--style", default=None, help="Optional style (e.g. documentary, editorial)")
     args = parser.parse_args()
 
     print(f"[content-engine] Running pipeline for topic: {args.topic}")
@@ -32,6 +34,8 @@ def main() -> None:
         audience=args.audience,
         red_lines=args.red_lines,
         must_hits=args.must_hits,
+        tone=args.tone,
+        style=args.style,
     ))
 
     brief = result.brief

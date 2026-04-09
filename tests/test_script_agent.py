@@ -66,6 +66,15 @@ async def test_run_script_prompt_includes_outline(mock_runner_result):
 
 
 @pytest.mark.asyncio
+async def test_run_script_prompt_includes_tone_and_style(mock_runner_result):
+    with patch("engine_agents.script.Runner.run", new=AsyncMock(return_value=mock_runner_result)) as mock_run:
+        await run_script(topic="Test topic", outline=MOCK_OUTLINE, tone="serious", style="documentary")
+        prompt = mock_run.call_args[0][1]
+        assert "serious" in prompt
+        assert "documentary" in prompt
+
+
+@pytest.mark.asyncio
 async def test_run_script_empty_outline():
     empty_outline = CommentaryOutline()
     response = {"opening": "Start.", "body": "Middle.", "closing": "End."}

@@ -21,13 +21,19 @@ async def run(
     audience: str | None = None,
     red_lines: str | None = None,
     must_hits: str | None = None,
+    tone: str | None = None,
+    style: str | None = None,
 ) -> EngineResult:
+    print(f"[Coordinator] Starting pipeline for topic: {topic}")
+
     brief = await run_research(
         topic=topic,
         angle=angle,
         audience=audience,
         red_lines=red_lines,
         must_hits=must_hits,
+        tone=tone,
+        style=style,
     )
 
     outline = await run_outline(
@@ -35,6 +41,8 @@ async def run(
         brief=brief,
         angle=angle,
         audience=audience,
+        tone=tone,
+        style=style,
     )
 
     script = await run_script(
@@ -42,6 +50,9 @@ async def run(
         outline=outline,
         angle=angle,
         audience=audience,
+        tone=tone,
+        style=style,
     )
 
+    print("[Coordinator] Pipeline complete")
     return EngineResult(brief=brief, outline=outline, script=script)
