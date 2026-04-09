@@ -1,5 +1,3 @@
-SPRINT_2_SPEC.md
-
 # Sprint 2 — Grounding & Tooling
 
 ## Objective

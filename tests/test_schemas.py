@@ -1,4 +1,4 @@
-from schemas.research import ResearchBrief
+from schemas.research import ResearchBrief, Source
 from schemas.outline import CommentaryOutline, OutlineSection
 from schemas.script import FinalScript
 
@@ -10,6 +10,21 @@ def test_research_brief_defaults():
     assert brief.relevant_examples == []
     assert brief.caveats == []
     assert brief.source_notes == []
+    assert brief.sources == []
+
+
+def test_source_fields():
+    source = Source(title="Article A", url="https://example.com", summary="A summary")
+    assert source.title == "Article A"
+    assert source.url == "https://example.com"
+    assert source.summary == "A summary"
+
+
+def test_research_brief_with_sources():
+    source = Source(title="Article A", url="https://example.com", summary="A summary")
+    brief = ResearchBrief(sources=[source])
+    assert len(brief.sources) == 1
+    assert brief.sources[0].title == "Article A"
 
 
 def test_research_brief_populated():

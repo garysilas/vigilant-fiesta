@@ -40,9 +40,30 @@ async def test_run_passes_topic_and_optionals():
     ):
         await run(topic="T", angle="A", audience="AU", red_lines="R", must_hits="M")
 
-    research_mock.assert_called_once_with(topic="T", angle="A", audience="AU", red_lines="R", must_hits="M")
-    outline_mock.assert_called_once_with(topic="T", brief=MOCK_BRIEF, angle="A", audience="AU")
-    script_mock.assert_called_once_with(topic="T", outline=MOCK_OUTLINE, angle="A", audience="AU")
+    research_mock.assert_called_once_with(topic="T", angle="A", audience="AU", red_lines="R", must_hits="M", tone=None, style=None)
+    outline_mock.assert_called_once_with(topic="T", brief=MOCK_BRIEF, angle="A", audience="AU", tone=None, style=None)
+    script_mock.assert_called_once_with(topic="T", outline=MOCK_OUTLINE, angle="A", audience="AU", tone=None, style=None)
+
+
+@pytest.mark.asyncio
+async def test_run_forwards_tone_and_style():
+    research_mock = AsyncMock(return_value=MOCK_BRIEF)
+    outline_mock = AsyncMock(return_value=MOCK_OUTLINE)
+    script_mock = AsyncMock(return_value=MOCK_SCRIPT)
+
+    with (
+        patch("flows.coordinator.run_research", new=research_mock),
+        patch("flows.coordinator.run_outline", new=outline_mock),
+        patch("flows.coordinator.run_script", new=script_mock),
+    ):
+        await run(topic="T", tone="serious", style="documentary")
+
+    assert research_mock.call_args.kwargs["tone"] == "serious"
+    assert research_mock.call_args.kwargs["style"] == "documentary"
+    assert outline_mock.call_args.kwargs["tone"] == "serious"
+    assert outline_mock.call_args.kwargs["style"] == "documentary"
+    assert script_mock.call_args.kwargs["tone"] == "serious"
+    assert script_mock.call_args.kwargs["style"] == "documentary"
 
 
 @pytest.mark.asyncio

@@ -5,7 +5,7 @@ import pytest
 
 from engine_agents.outline import run_outline
 from schemas.outline import CommentaryOutline, OutlineSection
-from schemas.research import ResearchBrief
+from schemas.research import ResearchBrief, Source
 
 MOCK_BRIEF = ResearchBrief(
     key_facts=["fact1"],
@@ -13,6 +13,7 @@ MOCK_BRIEF = ResearchBrief(
     relevant_examples=["example1"],
     caveats=["caveat1"],
     source_notes=["source1"],
+    sources=[Source(title="Article A", url="https://example.com/a", summary="A key finding")],
 )
 
 MOCK_RESPONSE = {
@@ -59,6 +60,25 @@ async def test_run_outline_prompt_includes_brief(mock_runner_result):
         assert "tension1" in prompt
         assert "economic" in prompt
         assert "young men" in prompt
+
+
+@pytest.mark.asyncio
+async def test_run_outline_prompt_includes_tone_and_style(mock_runner_result):
+    with patch("engine_agents.outline.Runner.run", new=AsyncMock(return_value=mock_runner_result)) as mock_run:
+        await run_outline(topic="Test topic", brief=MOCK_BRIEF, tone="serious", style="documentary")
+        prompt = mock_run.call_args[0][1]
+        assert "serious" in prompt
+        assert "documentary" in prompt
+
+
+@pytest.mark.asyncio
+async def test_run_outline_prompt_includes_sources(mock_runner_result):
+    with patch("engine_agents.outline.Runner.run", new=AsyncMock(return_value=mock_runner_result)) as mock_run:
+        await run_outline(topic="Test topic", brief=MOCK_BRIEF)
+        prompt = mock_run.call_args[0][1]
+        assert "Article A" in prompt
+        assert "https://example.com/a" in prompt
+        assert "A key finding" in prompt
 
 
 @pytest.mark.asyncio
