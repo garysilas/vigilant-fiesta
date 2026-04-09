@@ -1,11 +1,14 @@
 from dataclasses import dataclass
+from typing import List
 
+from engine_agents.clips import run_clips
 from engine_agents.outline import run_outline
 from engine_agents.research import run_research
 from engine_agents.script import run_script
+from engine_agents.voice import run_voice
 from schemas.outline import CommentaryOutline
 from schemas.research import ResearchBrief
-from schemas.script import FinalScript
+from schemas.script import Clip, FinalScript, NarrationScript
 
 
 @dataclass
@@ -13,6 +16,8 @@ class EngineResult:
     brief: ResearchBrief
     outline: CommentaryOutline
     script: FinalScript
+    narration: NarrationScript
+    clips: List[Clip]
 
 
 async def run(
@@ -54,5 +59,19 @@ async def run(
         style=style,
     )
 
+    narration = await run_voice(
+        script=script,
+        tone=tone,
+        style=style,
+    )
+
+    clips = await run_clips(script=script)
+
     print("[Coordinator] Pipeline complete")
-    return EngineResult(brief=brief, outline=outline, script=script)
+    return EngineResult(
+        brief=brief,
+        outline=outline,
+        script=script,
+        narration=narration,
+        clips=clips,
+    )
