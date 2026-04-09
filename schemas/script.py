@@ -9,3 +9,15 @@ class FinalScript:
 
     def full_text(self) -> str:
         return "\n\n".join(part for part in [self.opening, self.body, self.closing] if part)
+
+
+@dataclass
+class NarrationScript:
+    text: str = ""
+
+
+@dataclass
+class Clip:
+    hook: str = ""
+    body: str = ""
+    closing: str = ""
