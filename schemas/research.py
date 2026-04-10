@@ -6,6 +6,9 @@ class Source:
     title: str
     url: str
     summary: str
+    credibility_score: float = 0.0
+    recency: str = ""
+    bias_flag: str = ""
 
 
 @dataclass

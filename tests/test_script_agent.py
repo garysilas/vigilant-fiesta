@@ -5,7 +5,7 @@ import pytest
 
 from engine_agents.script import run_script
 from schemas.outline import CommentaryOutline, OutlineSection
-from schemas.script import FinalScript
+from schemas.script import FinalScript, ScriptFeedback
 
 MOCK_OUTLINE = CommentaryOutline(
     hook="Did you know...",
@@ -86,3 +86,43 @@ async def test_run_script_empty_outline():
 
     assert script.opening == "Start."
     assert script.full_text() == "Start.\n\nMiddle.\n\nEnd."
+
+
+MOCK_FEEDBACK = ScriptFeedback(
+    weaknesses=["Opening lacks specificity"],
+    missing_angles=["No global context"],
+    improvement_suggestions=["Add a concrete statistic"],
+)
+
+
+@pytest.mark.asyncio
+async def test_run_script_with_feedback_injects_weaknesses(mock_runner_result):
+    with patch("engine_agents.script.Runner.run", new=AsyncMock(return_value=mock_runner_result)) as mock_run:
+        await run_script(topic="Test topic", outline=MOCK_OUTLINE, feedback=MOCK_FEEDBACK)
+        prompt = mock_run.call_args[0][1]
+        assert "Opening lacks specificity" in prompt
+        assert "EVALUATOR FEEDBACK" in prompt
+
+
+@pytest.mark.asyncio
+async def test_run_script_with_feedback_injects_missing_angles(mock_runner_result):
+    with patch("engine_agents.script.Runner.run", new=AsyncMock(return_value=mock_runner_result)) as mock_run:
+        await run_script(topic="Test topic", outline=MOCK_OUTLINE, feedback=MOCK_FEEDBACK)
+        prompt = mock_run.call_args[0][1]
+        assert "No global context" in prompt
+
+
+@pytest.mark.asyncio
+async def test_run_script_with_feedback_injects_suggestions(mock_runner_result):
+    with patch("engine_agents.script.Runner.run", new=AsyncMock(return_value=mock_runner_result)) as mock_run:
+        await run_script(topic="Test topic", outline=MOCK_OUTLINE, feedback=MOCK_FEEDBACK)
+        prompt = mock_run.call_args[0][1]
+        assert "Add a concrete statistic" in prompt
+
+
+@pytest.mark.asyncio
+async def test_run_script_without_feedback_no_feedback_section(mock_runner_result):
+    with patch("engine_agents.script.Runner.run", new=AsyncMock(return_value=mock_runner_result)) as mock_run:
+        await run_script(topic="Test topic", outline=MOCK_OUTLINE)
+        prompt = mock_run.call_args[0][1]
+        assert "EVALUATOR FEEDBACK" not in prompt

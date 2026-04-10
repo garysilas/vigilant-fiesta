@@ -1,14 +1,16 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 from engine_agents.clips import run_clips
+from engine_agents.evaluator import run_evaluator
 from engine_agents.outline import run_outline
 from engine_agents.research import run_research
 from engine_agents.script import run_script
 from engine_agents.voice import run_voice
 from schemas.outline import CommentaryOutline
 from schemas.research import ResearchBrief
-from schemas.script import Clip, FinalScript, NarrationScript
+from schemas.script import Clip, FinalScript, NarrationScript, ScriptFeedback
+from tools.logger import log_stage
 
 
 @dataclass
@@ -18,6 +20,7 @@ class EngineResult:
     script: FinalScript
     narration: NarrationScript
     clips: List[Clip]
+    feedback: Optional[ScriptFeedback] = None
 
 
 async def run(
@@ -29,49 +32,60 @@ async def run(
     tone: str | None = None,
     style: str | None = None,
 ) -> EngineResult:
-    print(f"[Coordinator] Starting pipeline for topic: {topic}")
+    with log_stage("coordinator", topic=topic):
+        brief = await run_research(
+            topic=topic,
+            angle=angle,
+            audience=audience,
+            red_lines=red_lines,
+            must_hits=must_hits,
+            tone=tone,
+            style=style,
+        )
 
-    brief = await run_research(
-        topic=topic,
-        angle=angle,
-        audience=audience,
-        red_lines=red_lines,
-        must_hits=must_hits,
-        tone=tone,
-        style=style,
-    )
+        outline = await run_outline(
+            topic=topic,
+            brief=brief,
+            angle=angle,
+            audience=audience,
+            tone=tone,
+            style=style,
+        )
 
-    outline = await run_outline(
-        topic=topic,
-        brief=brief,
-        angle=angle,
-        audience=audience,
-        tone=tone,
-        style=style,
-    )
+        script = await run_script(
+            topic=topic,
+            outline=outline,
+            angle=angle,
+            audience=audience,
+            tone=tone,
+            style=style,
+        )
 
-    script = await run_script(
-        topic=topic,
-        outline=outline,
-        angle=angle,
-        audience=audience,
-        tone=tone,
-        style=style,
-    )
+        feedback = await run_evaluator(script=script)
 
-    narration = await run_voice(
-        script=script,
-        tone=tone,
-        style=style,
-    )
+        script = await run_script(
+            topic=topic,
+            outline=outline,
+            angle=angle,
+            audience=audience,
+            tone=tone,
+            style=style,
+            feedback=feedback,
+        )
 
-    clips = await run_clips(script=script)
+        narration = await run_voice(
+            script=script,
+            tone=tone,
+            style=style,
+        )
 
-    print("[Coordinator] Pipeline complete")
-    return EngineResult(
-        brief=brief,
-        outline=outline,
-        script=script,
-        narration=narration,
-        clips=clips,
-    )
+        clips = await run_clips(script=script)
+
+        return EngineResult(
+            brief=brief,
+            outline=outline,
+            script=script,
+            narration=narration,
+            clips=clips,
+            feedback=feedback,
+        )

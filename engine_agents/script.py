@@ -6,7 +6,8 @@ from agents import Agent, Runner
 from dotenv import load_dotenv
 
 from schemas.outline import CommentaryOutline
-from schemas.script import FinalScript
+from schemas.script import FinalScript, ScriptFeedback
+from tools.logger import log_stage
 
 load_dotenv()
 
@@ -95,42 +96,52 @@ async def run_script(
     audience: str | None = None,
     tone: str | None = None,
     style: str | None = None,
+    feedback: ScriptFeedback | None = None,
 ) -> FinalScript:
-    print("[Script Agent] Starting...")
+    mode = "rewrite" if feedback else "draft"
+    with log_stage("script_agent", topic=topic, mode=mode):
+        parts = [f"Topic: {topic}"]
+        if angle:
+            parts.append(f"Angle: {angle}")
+        if audience:
+            parts.append(f"Audience: {audience}")
+        if tone:
+            parts.append(f"Tone: {tone}")
+        if style:
+            parts.append(f"Style: {style}")
 
-    parts = [f"Topic: {topic}"]
-    if angle:
-        parts.append(f"Angle: {angle}")
-    if audience:
-        parts.append(f"Audience: {audience}")
-    if tone:
-        parts.append(f"Tone: {tone}")
-    if style:
-        parts.append(f"Style: {style}")
+        # Inject style guide content
+        style_guide = _load_style_guide()
+        if style_guide:
+            parts.append("\n--- STYLE GUIDE ---")
+            parts.append(style_guide)
+            parts.append("--- END STYLE GUIDE ---")
 
-    # Inject style guide content
-    style_guide = _load_style_guide()
-    if style_guide:
-        parts.append("\n--- STYLE GUIDE ---")
-        parts.append(style_guide)
-        parts.append("--- END STYLE GUIDE ---")
+        parts.append("\nOutline:")
+        parts.append(f"Hook: {outline.hook}")
+        parts.append(f"Thesis: {outline.thesis}")
+        for i, section in enumerate(outline.sections, 1):
+            parts.append(f"Section {i} - {section.title}: {section.argument}")
+        parts.append(f"Emotional progression: {outline.emotional_progression}")
+        parts.append(f"Closing idea: {outline.closing_idea}")
 
-    parts.append("\nOutline:")
-    parts.append(f"Hook: {outline.hook}")
-    parts.append(f"Thesis: {outline.thesis}")
-    for i, section in enumerate(outline.sections, 1):
-        parts.append(f"Section {i} - {section.title}: {section.argument}")
-    parts.append(f"Emotional progression: {outline.emotional_progression}")
-    parts.append(f"Closing idea: {outline.closing_idea}")
+        if feedback:
+            parts.append("\n--- EVALUATOR FEEDBACK (address these in your rewrite) ---")
+            if feedback.weaknesses:
+                parts.append(f"Weaknesses: {'; '.join(feedback.weaknesses)}")
+            if feedback.missing_angles:
+                parts.append(f"Missing angles: {'; '.join(feedback.missing_angles)}")
+            if feedback.improvement_suggestions:
+                parts.append(f"Improvement suggestions: {'; '.join(feedback.improvement_suggestions)}")
+            parts.append("--- END FEEDBACK ---")
 
-    prompt = "\n".join(parts)
-    result = await Runner.run(_agent, prompt)
-    raw = result.final_output
+        prompt = "\n".join(parts)
+        result = await Runner.run(_agent, prompt)
+        raw = result.final_output
 
-    data = json.loads(raw)
-    print("[Script Agent] Completed")
-    return FinalScript(
-        opening=data.get("opening", ""),
-        body=data.get("body", ""),
-        closing=data.get("closing", ""),
-    )
+        data = json.loads(raw)
+        return FinalScript(
+            opening=data.get("opening", ""),
+            body=data.get("body", ""),
+            closing=data.get("closing", ""),
+        )
