@@ -4,6 +4,7 @@ from agents import Agent, Runner
 from dotenv import load_dotenv
 
 from schemas.script import FinalScript, NarrationScript
+from tools.logger import log_stage
 
 load_dotenv()
 
@@ -55,22 +56,20 @@ async def run_voice(
     tone: str | None = None,
     style: str | None = None,
 ) -> NarrationScript:
-    print("[Voice Agent] Starting...")
+    with log_stage("voice_agent"):
+        parts = []
+        if tone:
+            parts.append(f"Tone: {tone}")
+        if style:
+            parts.append(f"Style: {style}")
+        parts.append("\nScript to convert:")
+        parts.append(script.full_text())
 
-    parts = []
-    if tone:
-        parts.append(f"Tone: {tone}")
-    if style:
-        parts.append(f"Style: {style}")
-    parts.append("\nScript to convert:")
-    parts.append(script.full_text())
+        prompt = "\n".join(parts)
+        result = await Runner.run(_agent, prompt)
+        raw = result.final_output
 
-    prompt = "\n".join(parts)
-    result = await Runner.run(_agent, prompt)
-    raw = result.final_output
-
-    data = json.loads(raw)
-    print("[Voice Agent] Completed")
-    return NarrationScript(
-        text=data.get("text", ""),
-    )
+        data = json.loads(raw)
+        return NarrationScript(
+            text=data.get("text", ""),
+        )

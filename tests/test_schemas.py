@@ -20,6 +20,23 @@ def test_source_fields():
     assert source.summary == "A summary"
 
 
+def test_source_scoring_defaults():
+    source = Source(title="X", url="https://x.com", summary="s")
+    assert source.credibility_score == 0.0
+    assert source.recency == ""
+    assert source.bias_flag == ""
+
+
+def test_source_scoring_populated():
+    source = Source(
+        title="X", url="https://x.com", summary="s",
+        credibility_score=0.85, recency="2024", bias_flag="none",
+    )
+    assert source.credibility_score == 0.85
+    assert source.recency == "2024"
+    assert source.bias_flag == "none"
+
+
 def test_research_brief_with_sources():
     source = Source(title="Article A", url="https://example.com", summary="A summary")
     brief = ResearchBrief(sources=[source])

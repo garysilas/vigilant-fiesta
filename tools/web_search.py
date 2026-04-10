@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 from tavily import TavilyClient
 
+from tools.logger import log
+
 
 @dataclass
 class SearchResult:
@@ -12,7 +14,7 @@ class SearchResult:
 
 
 def web_search(query: str) -> list[SearchResult]:
-    print(f"[Tool:web_search] Querying: {query}")
+    log("web_search", "query", query=query)
 
     api_key = os.getenv("TAVILY_API_KEY")
     if not api_key:

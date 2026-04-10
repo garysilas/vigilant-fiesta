@@ -5,6 +5,7 @@ from agents import Agent, Runner
 from dotenv import load_dotenv
 
 from schemas.script import Clip, FinalScript
+from tools.logger import log_stage
 
 load_dotenv()
 
@@ -62,31 +63,29 @@ _agent = Agent(
 
 
 async def run_clips(script: FinalScript) -> List[Clip]:
-    print("[Clips Agent] Starting...")
+    with log_stage("clips_agent"):
+        prompt_parts = [
+            "Extract 3–5 short-form clips from this script:",
+            "",
+            "=== FULL SCRIPT ===",
+            script.full_text(),
+            "=== END SCRIPT ===",
+        ]
 
-    prompt_parts = [
-        "Extract 3–5 short-form clips from this script:",
-        "",
-        "=== FULL SCRIPT ===",
-        script.full_text(),
-        "=== END SCRIPT ===",
-    ]
+        prompt = "\n".join(prompt_parts)
+        result = await Runner.run(_agent, prompt)
+        raw = result.final_output
 
-    prompt = "\n".join(prompt_parts)
-    result = await Runner.run(_agent, prompt)
-    raw = result.final_output
+        data = json.loads(raw)
+        clips_data = data.get("clips", [])
 
-    data = json.loads(raw)
-    clips_data = data.get("clips", [])
+        clips = [
+            Clip(
+                hook=c.get("hook", ""),
+                body=c.get("body", ""),
+                closing=c.get("closing", ""),
+            )
+            for c in clips_data
+        ]
 
-    clips = [
-        Clip(
-            hook=c.get("hook", ""),
-            body=c.get("body", ""),
-            closing=c.get("closing", ""),
-        )
-        for c in clips_data
-    ]
-
-    print(f"[Clips Agent] Completed ({len(clips)} clips)")
-    return clips
+        return clips

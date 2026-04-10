@@ -5,8 +5,8 @@ Build this project strictly from the spec and active task files.
 
 ## Authority order
 When instructions conflict, follow this order:
-1. `docs/specs/content_engine_v2.md`
-2. `docs/tasks/active_sprint_02.md`
+1. `docs/specs/content_engine_v4.md`
+2. `docs/tasks/active_sprint_04.md`
 3. `docs/tasks/next_task.md`
 4. `docs/state/current_state.md`
 
@@ -26,7 +26,7 @@ When instructions conflict, follow this order:
 For every task:
 1. Read the spec
 2. Read `current_state.md`
-3. Read `active_sprint_02.md`
+3. Read `active_sprint_04.md`
 4. Read `next_task.md`
 5. Execute only the next task
 6. Run relevant tests

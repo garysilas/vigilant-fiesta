@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -21,3 +21,10 @@ class Clip:
     hook: str = ""
     body: str = ""
     closing: str = ""
+
+
+@dataclass
+class ScriptFeedback:
+    weaknesses: list[str] = field(default_factory=list)
+    missing_angles: list[str] = field(default_factory=list)
+    improvement_suggestions: list[str] = field(default_factory=list)

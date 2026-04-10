@@ -17,7 +17,7 @@ MOCK_RESPONSE = {
     "relevant_examples": ["example1"],
     "caveats": ["caveat1"],
     "source_notes": ["source1"],
-    "sources": [{"title": "Article A", "url": "https://example.com/a", "summary": "Snippet A"}],
+    "sources": [{"title": "Article A", "url": "https://example.com/a", "summary": "Snippet A", "credibility_score": 0.85, "recency": "2024", "bias_flag": "none"}],
 }
 
 
@@ -53,6 +53,9 @@ async def test_run_research_populates_sources(mock_runner_result):
     assert brief.sources[0].title == "Article A"
     assert brief.sources[0].url == "https://example.com/a"
     assert brief.sources[0].summary == "Snippet A"
+    assert brief.sources[0].credibility_score == 0.85
+    assert brief.sources[0].recency == "2024"
+    assert brief.sources[0].bias_flag == "none"
 
 
 @pytest.mark.asyncio
@@ -106,3 +109,26 @@ async def test_run_research_empty_fields():
     assert brief.key_facts == []
     assert brief.source_notes == []
     assert brief.sources == []
+
+
+@pytest.mark.asyncio
+async def test_run_research_source_scoring_defaults():
+    response_no_scoring = {
+        "key_facts": [],
+        "key_tensions": [],
+        "relevant_examples": [],
+        "caveats": [],
+        "source_notes": [],
+        "sources": [{"title": "X", "url": "https://x.com", "summary": "s"}],
+    }
+    result = MagicMock()
+    result.final_output = json.dumps(response_no_scoring)
+
+    with patch("engine_agents.research.web_search", return_value=[]), \
+         patch("engine_agents.research.Runner.run", new=AsyncMock(return_value=result)):
+        brief = await run_research(topic="Test")
+
+    assert len(brief.sources) == 1
+    assert brief.sources[0].credibility_score == 0.0
+    assert brief.sources[0].recency == ""
+    assert brief.sources[0].bias_flag == ""
