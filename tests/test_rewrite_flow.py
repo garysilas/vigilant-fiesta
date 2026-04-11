@@ -8,7 +8,7 @@ import pytest
 from flows.coordinator import EngineResult, run
 from schemas.outline import CommentaryOutline
 from schemas.research import ResearchBrief
-from schemas.script import Clip, FinalScript, NarrationScript, ScriptFeedback
+from schemas.script import Clip, FinalScript, NarrationScript, ScriptFeedback, ScriptScore
 
 MOCK_BRIEF = ResearchBrief(key_facts=["fact1"])
 MOCK_OUTLINE = CommentaryOutline(hook="hook", thesis="thesis")
@@ -18,6 +18,8 @@ MOCK_FEEDBACK = ScriptFeedback(
     missing_angles=["global context"],
     improvement_suggestions=["add statistic"],
 )
+MOCK_SCORE = ScriptScore(overall_score=7.0)
+MOCK_SCORE_IMPROVED = ScriptScore(overall_score=8.0)
 MOCK_REWRITTEN_SCRIPT = FinalScript(opening="improved open", body="improved body", closing="improved close")
 MOCK_NARRATION = NarrationScript(text="narration text")
 MOCK_CLIPS = [Clip(hook="H", body="B", closing="C")]
@@ -29,11 +31,14 @@ async def test_rewrite_flow_returns_rewritten_script():
         patch("flows.coordinator.run_research", new=AsyncMock(return_value=MOCK_BRIEF)),
         patch("flows.coordinator.run_outline", new=AsyncMock(return_value=MOCK_OUTLINE)),
         patch("flows.coordinator.run_script", new=AsyncMock(side_effect=[MOCK_INITIAL_SCRIPT, MOCK_REWRITTEN_SCRIPT])),
-        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=MOCK_FEEDBACK)),
+        patch(
+            "flows.coordinator.run_evaluator",
+            new=AsyncMock(side_effect=[(MOCK_FEEDBACK, MOCK_SCORE), (MOCK_FEEDBACK, MOCK_SCORE_IMPROVED)]),
+        ),
         patch("flows.coordinator.run_voice", new=AsyncMock(return_value=MOCK_NARRATION)),
         patch("flows.coordinator.run_clips", new=AsyncMock(return_value=MOCK_CLIPS)),
     ):
-        result = await run(topic="Test")
+        result = await run(topic="Test", max_iterations=2)
 
     assert result.script is MOCK_REWRITTEN_SCRIPT
     assert result.script.opening == "improved open"
@@ -45,7 +50,7 @@ async def test_rewrite_flow_includes_feedback_in_result():
         patch("flows.coordinator.run_research", new=AsyncMock(return_value=MOCK_BRIEF)),
         patch("flows.coordinator.run_outline", new=AsyncMock(return_value=MOCK_OUTLINE)),
         patch("flows.coordinator.run_script", new=AsyncMock(side_effect=[MOCK_INITIAL_SCRIPT, MOCK_REWRITTEN_SCRIPT])),
-        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=MOCK_FEEDBACK)),
+        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=(MOCK_FEEDBACK, MOCK_SCORE))),
         patch("flows.coordinator.run_voice", new=AsyncMock(return_value=MOCK_NARRATION)),
         patch("flows.coordinator.run_clips", new=AsyncMock(return_value=MOCK_CLIPS)),
     ):
@@ -59,7 +64,7 @@ async def test_rewrite_flow_includes_feedback_in_result():
 
 @pytest.mark.asyncio
 async def test_rewrite_flow_evaluator_receives_initial_script():
-    evaluator_mock = AsyncMock(return_value=MOCK_FEEDBACK)
+    evaluator_mock = AsyncMock(return_value=(MOCK_FEEDBACK, MOCK_SCORE))
     with (
         patch("flows.coordinator.run_research", new=AsyncMock(return_value=MOCK_BRIEF)),
         patch("flows.coordinator.run_outline", new=AsyncMock(return_value=MOCK_OUTLINE)),
@@ -80,11 +85,11 @@ async def test_rewrite_flow_script_called_twice():
         patch("flows.coordinator.run_research", new=AsyncMock(return_value=MOCK_BRIEF)),
         patch("flows.coordinator.run_outline", new=AsyncMock(return_value=MOCK_OUTLINE)),
         patch("flows.coordinator.run_script", new=script_mock),
-        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=MOCK_FEEDBACK)),
+        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=(MOCK_FEEDBACK, MOCK_SCORE))),
         patch("flows.coordinator.run_voice", new=AsyncMock(return_value=MOCK_NARRATION)),
         patch("flows.coordinator.run_clips", new=AsyncMock(return_value=MOCK_CLIPS)),
     ):
-        await run(topic="Test")
+        await run(topic="Test", max_iterations=2)
 
     assert script_mock.call_count == 2
     first_call = script_mock.call_args_list[0]
@@ -101,11 +106,14 @@ async def test_rewrite_flow_voice_and_clips_use_rewritten():
         patch("flows.coordinator.run_research", new=AsyncMock(return_value=MOCK_BRIEF)),
         patch("flows.coordinator.run_outline", new=AsyncMock(return_value=MOCK_OUTLINE)),
         patch("flows.coordinator.run_script", new=AsyncMock(side_effect=[MOCK_INITIAL_SCRIPT, MOCK_REWRITTEN_SCRIPT])),
-        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=MOCK_FEEDBACK)),
+        patch(
+            "flows.coordinator.run_evaluator",
+            new=AsyncMock(side_effect=[(MOCK_FEEDBACK, MOCK_SCORE), (MOCK_FEEDBACK, MOCK_SCORE_IMPROVED)]),
+        ),
         patch("flows.coordinator.run_voice", new=voice_mock),
         patch("flows.coordinator.run_clips", new=clips_mock),
     ):
-        await run(topic="Test")
+        await run(topic="Test", max_iterations=2)
 
     voice_mock.assert_called_once_with(script=MOCK_REWRITTEN_SCRIPT, tone=None, style=None)
     clips_mock.assert_called_once_with(script=MOCK_REWRITTEN_SCRIPT)
