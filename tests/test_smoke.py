@@ -13,7 +13,7 @@ import pytest
 from flows.coordinator import EngineResult, run
 from schemas.outline import CommentaryOutline, OutlineSection
 from schemas.research import ResearchBrief
-from schemas.script import FinalScript, ScriptFeedback
+from schemas.script import FinalScript, ScriptFeedback, ScriptScore
 
 _BRIEF = ResearchBrief(
     key_facts=["wages stagnated since 1970s"],
@@ -35,6 +35,7 @@ _SCRIPT = FinalScript(
     closing="The question isn't whether this is happening. It's whether we care enough to fix it.",
 )
 _FEEDBACK = ScriptFeedback(weaknesses=["needs more data"], missing_angles=[], improvement_suggestions=[])
+_SCORE = ScriptScore(overall_score=7.0)
 _REWRITTEN_SCRIPT = FinalScript(
     opening="Here's what the numbers actually say — and why it matters.",
     body="Since the 1970s, real wages for young men without college degrees have fallen sharply...",
@@ -48,7 +49,7 @@ async def test_pipeline_smoke_returns_engine_result():
         patch("flows.coordinator.run_research", new=AsyncMock(return_value=_BRIEF)),
         patch("flows.coordinator.run_outline", new=AsyncMock(return_value=_OUTLINE)),
         patch("flows.coordinator.run_script", new=AsyncMock(side_effect=[_SCRIPT, _REWRITTEN_SCRIPT])),
-        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=_FEEDBACK)),
+        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=(_FEEDBACK, _SCORE))),
     ):
         result = await run(topic="Why young men are struggling financially")
 
@@ -64,7 +65,7 @@ async def test_pipeline_smoke_full_text_non_empty():
         patch("flows.coordinator.run_research", new=AsyncMock(return_value=_BRIEF)),
         patch("flows.coordinator.run_outline", new=AsyncMock(return_value=_OUTLINE)),
         patch("flows.coordinator.run_script", new=AsyncMock(side_effect=[_SCRIPT, _REWRITTEN_SCRIPT])),
-        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=_FEEDBACK)),
+        patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=(_FEEDBACK, _SCORE))),
     ):
         result = await run(topic="Why young men are struggling financially")
 
@@ -79,7 +80,7 @@ async def test_pipeline_smoke_all_optionals_forwarded():
     research_mock = AsyncMock(return_value=_BRIEF)
     outline_mock = AsyncMock(return_value=_OUTLINE)
     script_mock = AsyncMock(side_effect=[_SCRIPT, _REWRITTEN_SCRIPT])
-    evaluator_mock = AsyncMock(return_value=_FEEDBACK)
+    evaluator_mock = AsyncMock(return_value=(_FEEDBACK, _SCORE))
 
     with (
         patch("flows.coordinator.run_research", new=research_mock),

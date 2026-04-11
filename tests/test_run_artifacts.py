@@ -161,12 +161,13 @@ class TestMetadataStructure:
         from flows.coordinator import run, EngineResult
         from schemas.research import ResearchBrief, Source
         from schemas.outline import CommentaryOutline
-        from schemas.script import FinalScript, NarrationScript, ScriptFeedback, Clip
+        from schemas.script import FinalScript, NarrationScript, ScriptFeedback, ScriptScore, Clip
 
         mock_brief = ResearchBrief(key_facts=["fact1"], sources=[Source(title="Test", url="http://test.com", summary="test")])
         mock_outline = CommentaryOutline()
         mock_script = FinalScript(opening="Opening", body="Body", closing="Closing")
         mock_feedback = ScriptFeedback(weaknesses=["weakness"])
+        mock_score = ScriptScore(overall_score=7.0)
         mock_narration = NarrationScript(text="Narration")
         mock_clips = [Clip(hook="Hook", body="Body", closing="Close")]
         mock_rewritten = FinalScript(opening="Rewritten", body="Body", closing="Close")
@@ -175,7 +176,7 @@ class TestMetadataStructure:
             patch("flows.coordinator.run_research", new=AsyncMock(return_value=mock_brief)),
             patch("flows.coordinator.run_outline", new=AsyncMock(return_value=mock_outline)),
             patch("flows.coordinator.run_script", new=AsyncMock(side_effect=[mock_script, mock_rewritten])),
-            patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=mock_feedback)),
+            patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=(mock_feedback, mock_score))),
             patch("flows.coordinator.run_voice", new=AsyncMock(return_value=mock_narration)),
             patch("flows.coordinator.run_clips", new=AsyncMock(return_value=mock_clips)),
         ):
@@ -238,19 +239,20 @@ class TestMetadataStructure:
         from flows.coordinator import run, EngineResult
         from schemas.research import ResearchBrief, Source
         from schemas.outline import CommentaryOutline
-        from schemas.script import FinalScript, NarrationScript, ScriptFeedback
+        from schemas.script import FinalScript, NarrationScript, ScriptFeedback, ScriptScore
 
         mock_brief = ResearchBrief(sources=[Source(title="T", url="http://t.com", summary="s")])
         mock_outline = CommentaryOutline()
         mock_script = FinalScript()
         mock_feedback = ScriptFeedback()
+        mock_score = ScriptScore(overall_score=7.0)
         mock_narration = NarrationScript()
 
         with (
             patch("flows.coordinator.run_research", new=AsyncMock(return_value=mock_brief)),
             patch("flows.coordinator.run_outline", new=AsyncMock(return_value=mock_outline)),
             patch("flows.coordinator.run_script", new=AsyncMock(side_effect=[mock_script, mock_script])),
-            patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=mock_feedback)),
+            patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=(mock_feedback, mock_score))),
             patch("flows.coordinator.run_voice", new=AsyncMock(return_value=mock_narration)),
             patch("flows.coordinator.run_clips", new=AsyncMock(return_value=[])),
         ):
@@ -279,19 +281,20 @@ class TestMetadataStructure:
         from flows.coordinator import run
         from schemas.research import ResearchBrief, Source
         from schemas.outline import CommentaryOutline
-        from schemas.script import FinalScript, NarrationScript, ScriptFeedback
+        from schemas.script import FinalScript, NarrationScript, ScriptFeedback, ScriptScore
 
         mock_brief = ResearchBrief(sources=[Source(title="T", url="http://t.com", summary="s")])
         mock_outline = CommentaryOutline()
         mock_script = FinalScript()
         mock_feedback = ScriptFeedback()
+        mock_score = ScriptScore(overall_score=7.0)
         mock_narration = NarrationScript()
 
         with (
             patch("flows.coordinator.run_research", new=AsyncMock(return_value=mock_brief)),
             patch("flows.coordinator.run_outline", new=AsyncMock(return_value=mock_outline)),
             patch("flows.coordinator.run_script", new=AsyncMock(side_effect=[mock_script, mock_script])),
-            patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=mock_feedback)),
+            patch("flows.coordinator.run_evaluator", new=AsyncMock(return_value=(mock_feedback, mock_score))),
             patch("flows.coordinator.run_voice", new=AsyncMock(return_value=mock_narration)),
             patch("flows.coordinator.run_clips", new=AsyncMock(return_value=[])),
         ):
