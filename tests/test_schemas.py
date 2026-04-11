@@ -1,6 +1,6 @@
 from schemas.research import ResearchBrief, Source
 from schemas.outline import CommentaryOutline, OutlineSection
-from schemas.script import FinalScript
+from schemas.script import FinalScript, ScriptScore
 
 
 def test_research_brief_defaults():
@@ -91,3 +91,36 @@ def test_final_script_full_text_partial():
 def test_final_script_defaults():
     script = FinalScript()
     assert script.full_text() == ""
+
+
+def test_script_score_defaults():
+    score = ScriptScore()
+    assert score.clarity_score == 0.0
+    assert score.argument_score == 0.0
+    assert score.emotional_impact == 0.0
+    assert score.factual_grounding == 0.0
+    assert score.overall_score == 0.0
+
+
+def test_script_score_populated():
+    score = ScriptScore(
+        clarity_score=8.5,
+        argument_score=7.0,
+        emotional_impact=9.0,
+        factual_grounding=8.0,
+        overall_score=8.1,
+    )
+    assert score.clarity_score == 8.5
+    assert score.argument_score == 7.0
+    assert score.emotional_impact == 9.0
+    assert score.factual_grounding == 8.0
+    assert score.overall_score == 8.1
+
+
+def test_script_score_partial():
+    score = ScriptScore(clarity_score=5.0, overall_score=6.0)
+    assert score.clarity_score == 5.0
+    assert score.argument_score == 0.0
+    assert score.emotional_impact == 0.0
+    assert score.factual_grounding == 0.0
+    assert score.overall_score == 6.0
