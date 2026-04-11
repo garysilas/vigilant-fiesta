@@ -28,3 +28,12 @@ class ScriptFeedback:
     weaknesses: list[str] = field(default_factory=list)
     missing_angles: list[str] = field(default_factory=list)
     improvement_suggestions: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ScriptScore:
+    clarity_score: float = 0.0
+    argument_score: float = 0.0
+    emotional_impact: float = 0.0
+    factual_grounding: float = 0.0
+    overall_score: float = 0.0

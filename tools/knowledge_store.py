@@ -29,13 +29,13 @@ def save_research_brief(brief: ResearchBrief, topic: str) -> Path:
     return path
 
 
-def load_relevant_knowledge(topic: str) -> list[ResearchBrief]:
+def load_relevant_knowledge(topic: str, top_k: int = 5) -> list[ResearchBrief]:
     if not KNOWLEDGE_DIR.exists():
         return []
 
     topic_lower = topic.lower()
     topic_words = set(topic_lower.split())
-    results: list[ResearchBrief] = []
+    results: list[tuple[ResearchBrief, int]] = []  # (brief, match_score)
 
     for file in sorted(KNOWLEDGE_DIR.glob("*.json")):
         try:
@@ -45,7 +45,8 @@ def load_relevant_knowledge(topic: str) -> list[ResearchBrief]:
 
         stored_topic = data.get("topic", "")
         stored_words = set(stored_topic.lower().split())
-        if not topic_words & stored_words:
+        match_score = len(topic_words & stored_words)
+        if match_score == 0:
             continue
 
         brief_data = data.get("brief", {})
@@ -60,17 +61,20 @@ def load_relevant_knowledge(topic: str) -> list[ResearchBrief]:
             )
             for s in brief_data.get("sources", [])
         ]
-        results.append(
-            ResearchBrief(
-                key_facts=brief_data.get("key_facts", []),
-                key_tensions=brief_data.get("key_tensions", []),
-                relevant_examples=brief_data.get("relevant_examples", []),
-                caveats=brief_data.get("caveats", []),
-                source_notes=brief_data.get("source_notes", []),
-                sources=sources,
-            )
+        brief = ResearchBrief(
+            key_facts=brief_data.get("key_facts", []),
+            key_tensions=brief_data.get("key_tensions", []),
+            relevant_examples=brief_data.get("relevant_examples", []),
+            caveats=brief_data.get("caveats", []),
+            source_notes=brief_data.get("source_notes", []),
+            sources=sources,
         )
+        results.append((brief, match_score))
 
-    if results:
-        log("knowledge_store", "loaded", count=len(results), topic=topic)
-    return results
+    # Sort by match score (descending) and take top_k
+    results.sort(key=lambda x: x[1], reverse=True)
+    briefs = [r[0] for r in results[:top_k]]
+
+    if briefs:
+        log("knowledge_store", "loaded", count=len(briefs), topic=topic, top_k=top_k)
+    return briefs
