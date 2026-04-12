@@ -22,6 +22,7 @@ python main.py --topic "Topic" --angle "Angle" --audience "Audience"
 ## v5 Features
 
 ### Iterative Script Optimization
+
 ```bash
 # Run up to 3 iterations, stopping early if improvement < 0.2
 python main.py --topic "AI Safety" --max-iterations 3 --improvement-threshold 0.2
@@ -31,6 +32,7 @@ python main.py --topic "Quick Draft" --no-rewrite
 ```
 
 ### Run Artifact Tracking
+
 ```bash
 # Save run with custom ID
 python main.py --topic "Test" --run-id "my-run-001" --save-run
@@ -40,6 +42,7 @@ python main.py --inspect-run my-run-001
 ```
 
 ### Export Results
+
 ```bash
 # Export to txt file
 python main.py --topic "Test" --export txt
@@ -52,6 +55,7 @@ python main.py --topic "Test" --export all
 ```
 
 ### Output Modes
+
 ```bash
 # Show only the draft script
 python main.py --topic "Test" --output_mode draft
@@ -65,7 +69,7 @@ python main.py --topic "Test" --output_mode clips
 
 ## Project Structure
 
-```
+```text
 engine_agents/   agent definitions (research, outline, script, evaluator, voice, clips)
 tools/           tool functions (web_search, knowledge_store, run_artifacts, logger, scoring)
 schemas/         typed output models (ResearchBrief, CommentaryOutline, FinalScript, ScriptScore)
@@ -76,7 +80,7 @@ tests/           pytest tests (148 passing)
 ## CLI Reference
 
 | Flag | Description | Default |
-|------|-------------|---------|
+| ------ | ----------- | ------- |
 | `--topic` | Topic to generate script about | Required |
 | `--angle` | Optional angle/framing | None |
 | `--audience` | Target audience | None |

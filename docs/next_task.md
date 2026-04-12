@@ -14,3 +14,4 @@ Await `docs/specs/content_engine_v6.md` before defining Sprint 6 tasks.
 
 - Do not add new features outside v5 scope.
 - Keep system in maintenance mode (bug fixes only).
+- Keep markdown/docs lint hygiene green during maintenance updates.

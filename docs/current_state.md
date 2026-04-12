@@ -2,7 +2,7 @@
 
 ## Last Updated
 
-2026-04-11 — Recovery Sprint Task 1 complete. Evaluator mock mismatch fixed and full suite green.
+2026-04-11 — Recovery Sprint Task 1 complete; README markdown lint issues (MD040, MD060) cleaned.
 
 ## Architecture Note
 
