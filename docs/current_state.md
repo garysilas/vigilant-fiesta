@@ -2,158 +2,142 @@
 
 ## Last Updated
 
-2026-04-11 — Recovery Sprint Task 1 complete; README markdown lint issues (MD040, MD060) cleaned.
+2026-04-12 — Project recovery completed and Sprint 6 rebuilt from current code + spec.
 
-## Architecture Note
+## Recovery Report
 
-`agents/` was renamed to `engine_agents/` to avoid shadowing the `openai-agents` SDK which also installs as `agents`.
+### 1. System Overview
 
-## System Overview
+#### Tech Stack
 
-### Tech Stack
+- Python 3.11+
+- `openai-agents` SDK + `tavily-python`
+- `python-dotenv` for env loading
+- `pytest` + `pytest-asyncio` test stack
 
-- Python 3.11+, OpenAI Agents SDK (`openai-agents`), Tavily API, pytest + pytest-asyncio
-- CLI-only (no frontend, no database, no auth beyond API keys in `.env`)
-- File-based persistence: `data/knowledge/`, `data/runs/{run_id}/`
+#### Architecture Overview
 
-### Architecture
+- Frontend: none (CLI-only application)
+- Backend: Python orchestration pipeline in `flows/coordinator.py`
+- Database: none (filesystem persistence in `data/knowledge/` and `data/runs/{run_id}/`)
+- Auth: API keys via environment variables (`OPENAI_API_KEY`, `TAVILY_API_KEY`)
 
-Multi-agent pipeline orchestrated by `flows/coordinator.py`:
+Pipeline (current):
 
 ```text
 Input → Research → Knowledge Store → Outline → Script → [Evaluate → Score → Rewrite]×N → Select Best → Voice → Clips → Persist Artifacts
 ```
 
-### Core Files
+#### Key Modules
 
-- `pyproject.toml` — project metadata; packages: engine_agents, tools, schemas, flows
-- `.env` / `.env.example` — OPENAI_API_KEY, TAVILY_API_KEY
-- `main.py` — CLI entry point with all v5 flags + run inspector + export
-- `README.md` — setup and usage instructions
-- `docs/style_guide.md` — writing style guide
+- `main.py` — CLI entrypoint, generation mode, export mode, and base run inspection
+- `flows/coordinator.py` — end-to-end orchestration and artifact persistence
+- `engine_agents/` — research, outline, script, evaluator, voice, clips agents
+- `schemas/` — typed dataclasses for research, outline, script, feedback, and scores
+- `tools/knowledge_store.py` — research brief persistence/retrieval
+- `tools/scoring.py` — weighted scoring utilities and script selection helper
+- `tools/logger.py` — structured console log primitives (`log`, `log_stage`)
+- `tools/run_artifacts.py` — filesystem helpers for run outputs
 
-### Agents
+### 2. Feature Status
 
-- `engine_agents/research.py` — `run_research()`; tool-augmented with `web_search()`; returns `ResearchBrief` with scored `sources`
-- `engine_agents/outline.py` — `run_outline()`; takes topic + `ResearchBrief`; injects sources + prior knowledge
-- `engine_agents/script.py` — `run_script()`; takes topic + `CommentaryOutline` + optional `ScriptFeedback`; returns `FinalScript`
-- `engine_agents/voice.py` — `run_voice()`; converts `FinalScript` to `NarrationScript`
-- `engine_agents/clips.py` — `run_clips()`; extracts `Clip` list from `FinalScript`
-- `engine_agents/evaluator.py` — `run_evaluator()`; returns `(ScriptFeedback, ScriptScore)` tuple
+Spec baseline used for recovery: `docs/spec.md` / `docs/specs/content_engine_v6.md`.
 
-### Schemas
-
-- `schemas/research.py` — `Source` (with credibility scoring), `ResearchBrief`
-- `schemas/outline.py` — `CommentaryOutline`, `OutlineSection`
-- `schemas/script.py` — `FinalScript`, `NarrationScript`, `Clip`, `ScriptFeedback`, `ScriptScore`
-
-### Tools
-
-- `tools/web_search.py` — `SearchResult` + `web_search(query)` via Tavily
-- `tools/knowledge_store.py` — `save_research_brief()`, `load_relevant_knowledge(topic, top_k)`
-- `tools/scoring.py` — `select_best_script()`, `ScoreWeights`, `calculate_weighted_score()`
-- `tools/logger.py` — `log()` + `log_stage()` context manager
-- `tools/run_artifacts.py` — `create_run_dir()`, `save_json()`, `save_text()`, `load_json()`, `load_text()`
-
-### Flows
-
-- `flows/coordinator.py` — full pipeline with iteration loop, early stopping, best script selection, artifact saving; returns `EngineResult`
-
-## Feature Status (spec v5)
-
-| Feature | Status | Notes |
+| Capability (v6) | Status | Notes |
 | --- | --- | --- |
-| 1. Run Artifacts | ✅ Implemented | Missing `logs.json` per spec |
-| 2. Run Metadata | ✅ Implemented | All fields present |
-| 3. Iterative Optimization Loop | ✅ Implemented | |
-| 4. Script Scoring | ✅ Implemented | |
-| 5. Output Selection | ✅ Implemented | Tie-breaker uses first-occurrence, spec says `factual_grounding` |
-| 6. CLI Controls | ✅ Implemented | All 7 flags |
-| 7. Knowledge Store Upgrade | ✅ Implemented | |
-| 8. Run Inspection | ✅ Implemented | |
+| 1. Iteration history tracking (`all_versions`, `feedback_history`, `scores`) | Partially implemented | Iteration files are persisted (`script_vN`, `feedback_vN`, `scores_vN`) but `EngineResult` does not expose full history lists. |
+| 2. Tie-breaker fix (`factual_grounding`, then `clarity`) | Missing | `select_best_script()` keeps first occurrence on ties; coordinator also selects by highest `overall_score` directly. |
+| 3. Run logging (`logs.json`) | Missing | Logging prints JSON to stdout but no append-only run log file is written. |
+| 4. Run replay/inspection (`--show-history`) | Partially implemented | `--inspect-run` exists, but no history replay view, no feedback progression, no best-version highlighting. |
+| 5. Knowledge Store v2 (script learning layer) | Missing | Knowledge store persists `ResearchBrief` only; no `data/knowledge/scripts/` flow. |
+| 6. Evaluator calibration via CLI weights | Partially implemented | `ScoreWeights` exists in `tools/scoring.py`, but CLI flags and coordinator wiring are not implemented. |
+| 7. Deterministic structured logging schema | Partially implemented | Logger has `stage/event/duration/metadata`; required schema fields (`timestamp`, `iteration`, `data`) are not consistently enforced/persisted. |
+| 8. Artifact completeness (including `logs.json`) | Partially implemented | Core artifacts are saved; spec-required unified artifacts (`logs.json`, `final_script.txt`, aggregated score/feedback files) are incomplete. |
 
-## Spec Alignment
+#### Critical Issues
 
-### Matches
+- Selection logic does not meet v6 tie-breaking rules.
+- Iteration history is not exposed through `EngineResult`, limiting observability and replay.
+- Run logs are not persisted, so debugging depends on ephemeral stdout.
+- Replay tooling is shallow and cannot explain improvement trajectory.
+- Knowledge layer cannot learn from best-performing scripts yet.
 
-- All 8 v5 capabilities implemented in code
-- Pipeline flow matches spec diagram
-- CLI flags match spec
-- Data contracts match spec
+### 3. Spec Alignment
 
-### Gaps
+#### Matches
 
-- `EngineResult` missing `all_versions` and `feedback_history` (spec §5)
-- Tie-breaker should use `factual_grounding` not first-occurrence (spec §5)
-- `logs.json` not saved to run artifacts (spec §1)
+- Multi-agent pipeline and rewrite loop are operational.
+- Source scoring fields exist in `Source` schema.
+- Evaluator returns both `ScriptFeedback` and `ScriptScore`.
+- Run artifacts and metadata are persisted per run.
+- Base run inspection (`--inspect-run`) works for metadata + score files.
 
-### Deviations
+#### Gaps
 
-- None beyond gaps above
+- `EngineResult` missing full iteration history fields required in v6.
+- Tie-breaker behavior in selection does not follow v6.
+- No `logs.json` persistence and incomplete deterministic logging schema.
+- CLI lacks `--show-history` and scoring-weight override flags.
+- Knowledge store lacks script persistence and retrieval path.
 
-### Overbuild
+#### Deviations
 
-- None
+- Current scoring utility defaults to first-win tie behavior (v6 requires factual/clarity tie-break).
+- Artifact naming differs from v6 expectation (`best_script.txt` exists; `final_script.txt` expected).
+- `active_sprint_04.md` still states "READY TO START" while code has progressed beyond Sprint 4, creating documentation drift.
 
-## Test Status — GREEN
+#### Overbuild Areas
 
-**Actual: 158 passed** (`.venv/bin/python -m pytest tests/ -v`)
+- No material overbuild detected; primary issue is under-delivery versus v6 requirements.
 
-Recovery fix applied: evaluator mocks now return `(ScriptFeedback, ScriptScore)` tuples in:
+### 4. Active Sprint (Reconstructed)
 
-- `tests/test_rewrite_flow.py`
-- `tests/test_smoke.py`
-- `tests/test_run_artifacts.py`
+Sprint objective: close the minimum v6 gaps required for an observable, replayable, learning-capable MVP.
 
-### All test files
-
-- `tests/test_schemas.py` — 14 tests
-- `tests/test_research_agent.py` — 7 tests
-- `tests/test_outline_agent.py` — 5 tests
-- `tests/test_script_agent.py` — 9 tests
-- `tests/test_coordinator.py` — 4 tests
-- `tests/test_smoke.py` — 4 tests
-- `tests/test_live_pipeline.py` — 3 tests
-- `tests/test_web_search.py` — 4 tests
-- `tests/test_voice_agent.py` — 6 tests
-- `tests/test_clips_agent.py` — 7 tests
-- `tests/test_knowledge_store.py` — 18 tests
-- `tests/test_evaluator_agent.py` — 9 tests
-- `tests/test_rewrite_flow.py` — 5 tests
-- `tests/test_run_artifacts.py` — 13 tests
-- `tests/test_cli_flags.py` — 11 tests
-- `tests/test_iteration_loop.py` — 7 tests
-- `tests/test_scoring_selection.py` — 10 tests
-- `tests/test_run_inspector.py` — 11 tests
-- `tests/test_final_integration.py` — 11 tests
-
-## Sprint Status
-
-**Sprint 1–5 COMPLETE. Recovery Sprint complete.**
-
-## Active Sprint — Recovery
-
-| # | Task | Priority | Status |
+| # | Task | Objective | Expected Outcome |
 | --- | --- | --- | --- |
-| 1 | Fix mock evaluator returns in `test_rewrite_flow.py`, `test_smoke.py`, `test_run_artifacts.py` (return tuple not ScriptFeedback) | HIGH | COMPLETE |
-| 2 | Verify full test suite green (158+ passing) | HIGH | COMPLETE |
-| 3 | Update `current_state.md` with accurate counts | HIGH | COMPLETE |
+| 1 | Add iteration history + correct selection | Extend `EngineResult` with `all_versions`, `feedback_history`, `scores`; route best selection through v6-compliant tie-breaker logic. | Full per-iteration state is preserved and final selection is spec-correct. |
+| 2 | Implement persisted run logs | Add append-only structured events and write `data/runs/{run_id}/logs.json` with deterministic schema. | Each run is auditable without relying on console output. |
+| 3 | Upgrade run replay CLI | Add `--show-history` and print script/feedback/score progression with best-version marker. | Operators can replay decisions and improvement trajectory from artifacts. |
+| 4 | Add Knowledge Store v2 scripts layer | Persist high-scoring scripts to `data/knowledge/scripts/` and optionally retrieve for future runs. | System begins reusing prior successful outputs, not only research briefs. |
+| 5 | Expose scoring weight controls in CLI | Add weight flags and wire through coordinator/scoring path with stable defaults. | Users can tune scoring policy without changing code. |
 
-## Risks & Blockers
+Execution policy: complete tasks in order; keep each task shippable with tests before moving on.
 
-### Risks
+### 5. Risks & Blockers
 
-- Test mocks fell behind evaluator signature change — pattern could recur
+#### Risks
 
-### Blockers
+- `flows/coordinator.py` is high-centrality; regressions can break end-to-end flow.
+- Logging/schema drift risk if event shape is not enforced in one place.
+- Existing tests assert current tie behavior; they must be deliberately updated with spec-aware expectations.
+- Live/integration tests can be noisy and should not gate deterministic unit checks.
 
-- None — fix is mechanical (update mock return values)
+#### Blockers
 
-## Cleanup Opportunities
+- No hard blockers identified.
+- Main prerequisite is disciplined sequencing (selection/history before replay/logging polish).
 
-- `test_smoke.py` doesn't mock `run_voice`/`run_clips` — fragile
-- `test_live_pipeline.py` JSON decode error on live API — consider flaky marking
+#### Suggested Fixes
 
-## Next Task
+- Introduce a single typed log event contract in `tools/logger.py`.
+- Add focused tests per v6 requirement before broader integration checks.
+- Keep coordinator changes incremental and covered by `tests/test_iteration_loop.py`, `tests/test_scoring_selection.py`, and new replay/log tests.
 
-Sprint 6 planning (await `docs/specs/content_engine_v6.md`).
+### 6. Cleanup Opportunities
+
+#### Code Smells
+
+- Selection logic is duplicated conceptually (coordinator vs scoring utility).
+- Artifact filename conventions are inconsistent (`best_script.txt` vs spec `final_script.txt`).
+- Documentation drift exists across sprint tracking files.
+
+#### Safe Refactor Suggestions
+
+- Centralize script-selection policy in `tools/scoring.py` and call it from coordinator.
+- Centralize artifact filename constants in `tools/run_artifacts.py`.
+- Keep sprint/status docs synchronized with actual implementation state during each completed task.
+
+## Validation Snapshot
+
+- Full test suite result: `158 passed` via `.venv/bin/python -m pytest tests -q`.

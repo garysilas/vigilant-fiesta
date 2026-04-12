@@ -1,17 +1,28 @@
 # Next Task
 
-## Sprint 6 Planning
+## Sprint 6 — Task 1
 
 ### Status
 
-Recovery sprint is complete and test suite is green (`158 passed`).
+Ready to execute.
 
-### Next Steps
+### Task
 
-Await `docs/specs/content_engine_v6.md` before defining Sprint 6 tasks.
+Add iteration history tracking and v6-compliant best-script selection.
 
-### Until v6 spec exists
+### Scope
 
-- Do not add new features outside v5 scope.
-- Keep system in maintenance mode (bug fixes only).
-- Keep markdown/docs lint hygiene green during maintenance updates.
+- Extend `EngineResult` with:
+  - `all_versions: list[FinalScript]`
+  - `feedback_history: list[ScriptFeedback]`
+  - `scores: list[ScriptScore]`
+- Ensure coordinator appends script/feedback/score per iteration in order.
+- Update selection to use `tools/scoring.select_best_script()` with v6 tie-break rule (`factual_grounding`, then `clarity`).
+- Keep existing behavior stable for non-tie scenarios.
+
+### Acceptance Criteria
+
+- `EngineResult` exposes complete iteration history.
+- Final selected script is included in `all_versions`.
+- Tie cases select by `factual_grounding`, then `clarity`.
+- Relevant tests are added/updated and green.
